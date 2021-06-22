@@ -6,6 +6,7 @@ const midY = Math.round(canvas.height / 2)
 const radius = 50
 
 ctx.lineWidth = 2
+const threshold = 100
 
 function calcB (a, angle, reference, reverse, aMid, bMid) {
   const tan = -Math.tan(angle * Math.PI / 180)
@@ -27,10 +28,10 @@ function initShape (shape) {
       break
     case 'triangle':
       ctx.beginPath()
-      ctx.moveTo(midX, midY - (radius / 2))
-      ctx.lineTo(midX + (radius / 2), midY + (radius / 2))
-      ctx.lineTo(midX - (radius / 2), midY + (radius / 2))
-      ctx.lineTo(midX, midY - (radius / 2))
+      ctx.moveTo(midX, midY - radius)
+      ctx.lineTo(midX + radius, midY + radius)
+      ctx.lineTo(midX - radius, midY + radius)
+      ctx.lineTo(midX, midY - radius)
       ctx.stroke()
       break
     default:
@@ -62,7 +63,7 @@ function traceAngle (angle) {
 
   if (steep) values.reverse()
 
-  for (let a = values[0].mid; Math.abs(a) <= values[0].max * 100; values[0].backward ? a-- : a++) {
+  for (let a = values[0].mid; Math.abs(a) <= values[0].max * threshold; values[0].backward ? a-- : a++) {
     const b = calcB(a, angle, reference, steep, values[0].mid, values[1].mid)
     const looped = a < 0 || a > values[0].max || b < 0 || b > values[1].max
 
@@ -76,20 +77,20 @@ function traceAngle (angle) {
     const pixel = ctx.getImageData(...coords, 1, 1).data
 
     if (pixel[0] && looped) {
-      const ghostA = values[0].mid + (a < 0 ? -radius : radius) + ((a - values[0].mid) / 10)
-      const ghostCoords = [
-        ghostA,
-        calcB(ghostA, angle, reference, steep, values[0].mid, values[1].mid)
+      const projA = values[0].mid + (a < 0 ? -radius : radius) + ((a - values[0].mid) / (threshold / 2))
+      const projCoords = [
+        projA,
+        calcB(projA, angle, reference, steep, values[0].mid, values[1].mid)
       ]
 
-      if (steep) ghostCoords.reverse()
+      if (steep) projCoords.reverse()
 
       console.log('SKEL:', a, b)
       console.log('HIT COORDS:', coords)
-      console.log('GHOST COORDS:', ghostCoords)
+      console.log('PROJECTION COORDS:', projCoords)
 
       ctx.fillStyle = 'black'
-      ctx.fillRect(...ghostCoords, 2, 2)
+      ctx.fillRect(...projCoords, 2, 2)
       ctx.fillStyle = 'rgba(0, 255, 0, 0.1)'
 
       return true
