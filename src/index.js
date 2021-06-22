@@ -3,6 +3,7 @@ const ctx = canvas.getContext('2d')
 
 const midX = Math.round(canvas.width / 2)
 const midY = Math.round(canvas.height / 2)
+const radius = 50
 
 ctx.lineWidth = 2
 
@@ -17,30 +18,30 @@ function initShape (shape) {
 
   switch (shape) {
     case 'square':
-      ctx.strokeRect(midX - 50, midY - 50, 100, 100)
+      ctx.strokeRect(midX - radius, midY - radius, radius * 2, radius * 2)
       break
     case 'circle':
       ctx.beginPath()
-      ctx.arc(midX, midY, 50, 0, 2 * Math.PI)
+      ctx.arc(midX, midY, radius, 0, 2 * Math.PI)
       ctx.stroke()
       break
     case 'triangle':
       ctx.beginPath()
-      ctx.moveTo(midX, midY - 25)
-      ctx.lineTo(midX + 25, midY + 25)
-      ctx.lineTo(midX - 25, midY + 25)
-      ctx.lineTo(midX, midY - 25)
+      ctx.moveTo(midX, midY - (radius / 2))
+      ctx.lineTo(midX + (radius / 2), midY + (radius / 2))
+      ctx.lineTo(midX - (radius / 2), midY + (radius / 2))
+      ctx.lineTo(midX, midY - (radius / 2))
       ctx.stroke()
       break
     default:
       ctx.beginPath()
-      ctx.moveTo(midX - 10, midY - 10)
-      ctx.lineTo(midX + 10, midY + 10)
+      ctx.moveTo(midX - (radius / 2), midY - (radius / 2))
+      ctx.lineTo(midX + (radius / 2), midY + (radius / 2))
       ctx.stroke()
   }
 }
 
-async function traceAngle (angle) {
+function traceAngle (angle) {
   ctx.fillStyle = 'rgba(0, 255, 0, 0.1)'
 
   const reference = 90 - Math.abs((angle % 180 + 180) % 180 - 90)
@@ -75,12 +76,17 @@ async function traceAngle (angle) {
     const pixel = ctx.getImageData(...coords, 1, 1).data
 
     if (pixel[0] && looped) {
+      const ghostA = values[0].mid + (a < 0 ? -radius : radius) + ((a - values[0].mid) / 10)
       const ghostCoords = [
-        values[0].mid + ((a % values[0].max) / 2),
-        calcB(values[0].mid + ((a % values[0].max) / 2), angle, reference, steep, values[0].mid, values[1].mid)
+        ghostA,
+        calcB(ghostA, angle, reference, steep, values[0].mid, values[1].mid)
       ]
 
       if (steep) ghostCoords.reverse()
+
+      console.log('SKEL:', a, b)
+      console.log('HIT COORDS:', coords)
+      console.log('GHOST COORDS:', ghostCoords)
 
       ctx.fillStyle = 'black'
       ctx.fillRect(...ghostCoords, 2, 2)
@@ -94,9 +100,23 @@ async function traceAngle (angle) {
 }
 
 function fullTrace () {
-  for (let a = 0; a < 360; a++) setTimeout(() => traceAngle(a))
+  for (let a = 0; a < 360; a++) {
+    setTimeout(() => {
+      const hit = traceAngle(a)
+
+      if (!hit) console.warn(`Angle ${a} did not hit a surface. Try increasing loop threshold`)
+    })
+  }
 }
 
-initShape('triangle')
+const buttons = document.getElementsByTagName('button')
 
-fullTrace()
+for (const button of buttons) {
+  button.addEventListener('click', () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+    initShape(button.id)
+
+    fullTrace()
+  })
+}
